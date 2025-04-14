@@ -1,115 +1,168 @@
-CREATE TABLE produtos (
-    id INT PRIMARY KEY,
-    nome VARCHAR(100),
-    preco DECIMAL(10,2),
-    estoque INT
+CREATE TABLE usuario_tb (
+    id_usuario INT PRIMARY KEY AUTO_INCREMENT,
+    nome_usuario VARCHAR(100) NOT NULL,
+    email_usuario VARCHAR(100) UNIQUE NOT NULL,
+    senha_usuario VARCHAR(255) NOT NULL,
+    telefone_usuario VARCHAR(15),
+    cargo_usuario ENUM('cliente', 'administrador') NOT NULL,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE clientes (
-    id INT PRIMARY KEY,
-    nome VARCHAR(100),
-    email VARCHAR(100)
+CREATE TABLE categoria_tb (
+    id_categoria INT PRIMARY KEY AUTO_INCREMENT,
+    nome_categoria VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE vendas (
-    id INT PRIMARY KEY,
-    cliente_id INT,
-    data_venda DATE,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+CREATE TABLE fornecedor_tb (
+    id_fornecedor INT PRIMARY KEY AUTO_INCREMENT,
+    nome_fornecedor VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE itens_venda (
-    id INT PRIMARY KEY,
-    venda_id INT,
-    produto_id INT,
-    quantidade INT,
-    preco_unitario DECIMAL(10,2),
-    FOREIGN KEY (venda_id) REFERENCES vendas(id),
-    FOREIGN KEY (produto_id) REFERENCES produtos(id)
+CREATE TABLE produto_tb (
+    id_produto INT PRIMARY KEY AUTO_INCREMENT,
+    nome_produto VARCHAR(100) NOT NULL,
+    descricao_produto TEXT,
+    preco_produto DECIMAL(10, 2) NOT NULL,
+    quantidade_estoque_produto INT NOT NULL,
+    produto_criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id_categoria INT,
+    id_fornecedor INT,
+    FOREIGN KEY (id_categoria) REFERENCES categoria_tb(id_categoria),
+    FOREIGN KEY (id_fornecedor) REFERENCES fornecedor_tb(id_fornecedor)
 );
 
-CREATE TABLE avaliacoes (
-    id INT PRIMARY KEY,
-    produto_id INT,
-    nota INT CHECK (nota >= 1 AND nota <= 5),
-    comentario TEXT,
-    FOREIGN KEY (produto_id) REFERENCES produtos(id)
+CREATE TABLE pedidos_tb (
+    id_pedido INT PRIMARY KEY AUTO_INCREMENT,
+    id_usuario INT,
+    data_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pendente', 'enviado', 'entregue', 'cancelado') NOT NULL,
+    FOREIGN KEY (id_usuario) REFERENCES usuario_tb(id_usuario)
 );
 
-INSERT INTO produtos (id, nome, preco, estoque) VALUES
-(1, 'Notebook', 3000.00, 5),
-(2, 'Mouse', 50.00, 100),
-(3, 'Teclado', 100.00, 80),
-(4, 'Monitor', 800.00, 10);
+CREATE TABLE itens_pedido_tb (
+    id_pedido INT,
+    id_produto INT,
+    quantidade_itens_produto INT NOT NULL,
+    preco_itens_produto DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (id_pedido, id_produto),
+    FOREIGN KEY (id_pedido) REFERENCES pedidos_tb(id_pedido),
+    FOREIGN KEY (id_produto) REFERENCES produto_tb(id_produto)
+);
 
-INSERT INTO clientes (id, nome, email) VALUES
-(1, 'João Silva', 'joao@gmail.com'),
-(2, 'Maria Souza', 'maria@gmail.com'),
-(3, 'Carlos Lima', 'carlos@gmail.com');
+CREATE TABLE pagamento_tb (
+    id_pagamento INT PRIMARY KEY AUTO_INCREMENT,
+    id_pedido INT,
+    data_pagamento TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metodo_pagamento ENUM('cartao_credito', 'boleto', 'pix', 'paypal') NOT NULL,
+    valor_pagamento DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (id_pedido) REFERENCES pedidos_tb(id_pedido)
+);
 
-INSERT INTO vendas (id, cliente_id, data_venda) VALUES
-(1, 1, '2025-03-10'),
-(2, 2, '2025-03-15'),
-(3, 1, '2025-04-01'),
-(4, 3, '2025-04-10');
+CREATE TABLE avaliacao_tb (
+    id_avaliacao INT PRIMARY KEY AUTO_INCREMENT,
+    id_usuario INT,
+    id_produto INT,
+    nota_avaliacao INT CHECK (nota_avaliacao BETWEEN 1 AND 5),
+    comentario_avaliacao TEXT,
+    avaliacao_criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuario_tb(id_usuario),
+    FOREIGN KEY (id_produto) REFERENCES produto_tb(id_produto),
+    UNIQUE (id_usuario, id_produto)
+);
 
-INSERT INTO itens_venda (id, venda_id, produto_id, quantidade, preco_unitario) VALUES
-(1, 1, 1, 1, 3000.00),
-(2, 2, 2, 2, 50.00),
-(3, 2, 3, 1, 100.00),
-(4, 3, 2, 5, 45.00),
-(5, 4, 1, 1, 2900.00),
-(6, 4, 4, 1, 800.00);
+CREATE TABLE entrega_tb (
+    id_entrega INT PRIMARY KEY AUTO_INCREMENT,
+    id_pedido INT,
+    endereco_entrega VARCHAR(255) NOT NULL,
+    status_entrega ENUM('pendente', 'enviado', 'entregue') NOT NULL,
+    data_entrega TIMESTAMP,
+    FOREIGN KEY (id_pedido) REFERENCES pedidos_tb(id_pedido)
+);
 
-INSERT INTO avaliacoes (id, produto_id, nota, comentario) VALUES
-(1, 1, 4, 'Muito bom'),
-(2, 1, 5, 'Excelente'),
-(3, 2, 3, 'Ok'),
-(4, 4, 5, 'Imagem excelente');
+INSERT INTO categoria_tb (nome_categoria) VALUES ('Informática'), ('Eletrônicos');
 
--- 1. Listar os produtos mais vendidos
-SELECT p.nome, SUM(iv.quantidade) AS total_vendido
-FROM itens_venda iv
-JOIN produtos p ON p.id = iv.produto_id
-GROUP BY p.nome
+INSERT INTO fornecedor_tb (nome_fornecedor) VALUES ('Dell'), ('Logitech');
+
+INSERT INTO usuario_tb (nome_usuario, email_usuario, senha_usuario, telefone_usuario, cargo_usuario) VALUES
+('João Silva', 'joao@email.com', 'senha123', '81999990000', 'cliente'),
+('Maria Souza', 'maria@email.com', 'senha456', '81999991111', 'cliente'),
+('Admin', 'admin@email.com', 'admin123', '81999992222', 'administrador');
+
+INSERT INTO produto_tb (nome_produto, descricao_produto, preco_produto, quantidade_estoque_produto, id_categoria, id_fornecedor) VALUES
+('Notebook', 'Notebook potente', 3500.00, 5, 1, 1),
+('Mouse', 'Mouse sem fio', 100.00, 50, 1, 2),
+('Teclado', 'Teclado mecânico', 250.00, 20, 1, 2),
+('Monitor', 'Monitor Full HD', 900.00, 10, 2, 1);
+
+INSERT INTO pedidos_tb (id_usuario, status) VALUES
+(1, 'entregue'),
+(2, 'entregue'),
+(1, 'pendente');
+
+INSERT INTO itens_pedido_tb (id_pedido, id_produto, quantidade_itens_produto, preco_itens_produto) VALUES
+(1, 1, 1, 3500.00),
+(1, 2, 2, 95.00),
+(2, 3, 1, 240.00),
+(2, 2, 1, 100.00),
+(3, 4, 1, 900.00);
+
+INSERT INTO pagamento_tb (id_pedido, metodo_pagamento, valor_pagamento) VALUES
+(1, 'cartao_credito', 3690.00),
+(2, 'pix', 340.00);
+
+INSERT INTO avaliacao_tb (id_usuario, id_produto, nota_avaliacao, comentario_avaliacao) VALUES
+(1, 1, 5, 'Notebook excelente!'),
+(1, 2, 4, 'Mouse bom, mas poderia ser melhor.'),
+(2, 3, 5, 'Teclado top!');
+
+INSERT INTO entrega_tb (id_pedido, endereco_entrega, status_entrega, data_entrega) VALUES
+(1, 'Rua A, 123', 'entregue', '2025-04-01'),
+(2, 'Rua B, 456', 'entregue', '2025-04-05');
+
+-- 1. Produtos mais vendidos
+SELECT p.nome_produto, SUM(ip.quantidade_itens_produto) AS total_vendido
+FROM itens_pedido_tb ip
+JOIN produto_tb p ON p.id_produto = ip.id_produto
+GROUP BY p.nome_produto
 ORDER BY total_vendido DESC;
 
--- 2. Listar os clientes que mais compraram no último mês
-SELECT c.nome, COUNT(v.id) AS total_compras
-FROM vendas v
-JOIN clientes c ON c.id = v.cliente_id
-WHERE v.data_venda >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
-GROUP BY c.nome
-ORDER BY total_compras DESC;
+-- 2. Clientes que mais compraram no último mês
+SELECT u.nome_usuario, COUNT(ped.id_pedido) AS total_pedidos
+FROM pedidos_tb ped
+JOIN usuario_tb u ON u.id_usuario = ped.id_usuario
+WHERE ped.data_pedido >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+GROUP BY u.nome_usuario
+ORDER BY total_pedidos DESC;
 
--- 3. Verificar o estoque baixo de produtos (estoque < 10)
-SELECT nome, estoque
-FROM produtos
-WHERE estoque < 10;
+-- 3. Produtos com estoque baixo (< 10 unidades)
+SELECT nome_produto, quantidade_estoque_produto
+FROM produto_tb
+WHERE quantidade_estoque_produto < 10;
 
--- 4. Consultar o faturamento por período (por dia)
+-- 4. Faturamento por data
 SELECT 
-    DATE(v.data_venda) AS data,
-    SUM(iv.quantidade * iv.preco_unitario) AS faturamento
-FROM vendas v
-JOIN itens_venda iv ON iv.venda_id = v.id
-GROUP BY DATE(v.data_venda)
+    DATE(p.data_pedido) AS data,
+    SUM(ip.quantidade_itens_produto * ip.preco_itens_produto) AS faturamento
+FROM pedidos_tb p
+JOIN itens_pedido_tb ip ON p.id_pedido = ip.id_pedido
+GROUP BY DATE(p.data_pedido)
 ORDER BY data;
 
--- 5. Obter a média de avaliações de cada produto
+-- 5. Média de avaliação por produto
 SELECT 
-    p.nome,
-    ROUND(AVG(a.nota), 2) AS media_avaliacao
-FROM avaliacoes a
-JOIN produtos p ON p.id = a.produto_id
-GROUP BY p.nome;
+    pr.nome_produto,
+    ROUND(AVG(av.nota_avaliacao), 2) AS media_avaliacao
+FROM avaliacao_tb av
+JOIN produto_tb pr ON pr.id_produto = av.id_produto
+GROUP BY pr.nome_produto;
 
 -- 6. Total gasto por cliente
 SELECT 
-    c.nome,
-    SUM(iv.quantidade * iv.preco_unitario) AS total_gasto
-FROM clientes c
-JOIN vendas v ON c.id = v.cliente_id
-JOIN itens_venda iv ON iv.venda_id = v.id
-GROUP BY c.nome
+    u.nome_usuario,
+    SUM(ip.quantidade_itens_produto * ip.preco_itens_produto) AS total_gasto
+FROM usuario_tb u
+JOIN pedidos_tb p ON u.id_usuario = p.id_usuario
+JOIN itens_pedido_tb ip ON p.id_pedido = ip.id_pedido
+GROUP BY u.nome_usuario
 ORDER BY total_gasto DESC;
+
